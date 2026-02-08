@@ -4,18 +4,17 @@
 
 # Wallet
 
-**Wallet** is a simple and intuitive budget management app built with Flutter. Track your spending and take control of your finances with ease.
+A simple budget management app built with Flutter. Track your spending and manage your finances.
 
 [![Get it on GitHub](https://img.shields.io/badge/Get%20it%20on-GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/alfahrelrifananda/wallet/releases)
 
 ## Features
 
-- **Transaction Tracking** – Add and categorize your income and expenses
-- **Transaction History** – View all transactions in an organized list
-- **Material Design 3** – Modern, clean interface
-- **Lightweight & Fast** – Optimal performance
-- **Privacy First** – Your data stays on your device
-- **Multi-language** – Available in English and Indonesian
+- Add and categorize income and expenses
+- View transaction history
+- Material Design 3 interface
+- Your data stays on your device
+- Available in English and Indonesian
 
 ## Tech Stack
 
@@ -30,7 +29,7 @@
 ### Prerequisites
 
 - [Flutter SDK](https://flutter.dev/docs/get-started/install) (latest stable version)
-- Android Studio / VS Code with Flutter extensions
+- Android Studio or VS Code with Flutter extensions
 - Android device or emulator (API 24+)
 
 ### Installation
@@ -53,13 +52,12 @@
 
 ## Contributing
 
-Contributions are what make the open-source community thrive! Feel free to:
-
+If you'd like to contribute:
 - Fork the project
 - Open issues for bugs or feature requests
-- Submit pull requests with improvements
-- Help translate wallet into your language
+- Submit pull requests
+- Help with translations
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for more details.
+This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for details.
