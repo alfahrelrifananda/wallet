@@ -496,7 +496,7 @@ class _SettingsTabState extends State<SettingsTab> {
                 trailing: const Icon(Icons.open_in_new),
                 onTap: () async {
                   final uri = Uri.parse(
-                    'https://github.com/alfahrelrifananda/wallet-app',
+                    'https://github.com/alfahrelrifananda/wallet',
                   );
                   if (await canLaunchUrl(uri)) {
                     await launchUrl(uri, mode: LaunchMode.externalApplication);
