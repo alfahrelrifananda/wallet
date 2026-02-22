@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'package:wallet/model.dart';
 import 'package:wallet/home.dart';
@@ -27,6 +28,8 @@ class _AppControllerState extends State<AppController> {
   bool _isLoading = true;
   bool _biometricEnabled = false;
   bool _isAuthenticated = false;
+  bool _isPinFallback = false;
+  String? _hashedPin;
   final LocalAuthentication _localAuth = LocalAuthentication();
   DateTime? _debugCurrentDate;
 
@@ -51,6 +54,7 @@ class _AppControllerState extends State<AppController> {
       _currencySymbol = prefs.getString('currencySymbol') ?? 'Rp';
       _totalBudget = prefs.getDouble('totalBudget') ?? 0;
       _biometricEnabled = prefs.getBool('biometric_enabled') ?? false;
+      _hashedPin = prefs.getString('auth_pin_hash');
 
       final dateString = prefs.getString('finalDate');
       if (dateString != null) {
@@ -88,6 +92,41 @@ class _AppControllerState extends State<AppController> {
     }
   }
 
+  String _hashPin(String pin) {
+    final bytes = utf8.encode(pin);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  Future<void> _verifyPin(String pin) async {
+    if (_hashedPin == null) {
+      final prefs = await SharedPreferences.getInstance();
+      final hash = _hashPin(pin);
+      await prefs.setString('auth_pin_hash', hash);
+      setState(() {
+        _hashedPin = hash;
+        _isAuthenticated = true;
+        _isPinFallback = false;
+      });
+    } else {
+      if (_hashPin(pin) == _hashedPin) {
+        setState(() {
+          _isAuthenticated = true;
+          _isPinFallback = false;
+        });
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Incorrect PIN. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _authenticateUser() async {
     if (kIsWeb || !_biometricEnabled) {
       setState(() => _isAuthenticated = true);
@@ -99,7 +138,7 @@ class _AppControllerState extends State<AppController> {
       final isDeviceSupported = await _localAuth.isDeviceSupported();
 
       if (!canAuth || !isDeviceSupported) {
-        setState(() => _isAuthenticated = true);
+        setState(() => _isPinFallback = true);
         return;
       }
 
@@ -111,23 +150,21 @@ class _AppControllerState extends State<AppController> {
         ),
       );
 
-      setState(() => _isAuthenticated = authenticated);
-
-      if (!authenticated) {
-        // If authentication fails, show retry dialog
+      if (authenticated) {
+        setState(() => _isAuthenticated = true);
+      } else {
         _showAuthenticationFailedDialog();
       }
     } catch (e) {
-      // On error, allow access but show warning
-      setState(() => _isAuthenticated = true);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Authentication error: $e'),
+            content: Text('Biometric error: $e. Use PIN instead.'),
             backgroundColor: Colors.orange,
           ),
         );
       }
+      setState(() => _isPinFallback = true);
     }
   }
 
@@ -139,10 +176,17 @@ class _AppControllerState extends State<AppController> {
         icon: const Icon(Icons.lock_outline, color: Colors.red, size: 48),
         title: const Text('Authentication Failed'),
         content: const Text(
-          'You need to authenticate to access wallet. Please try again.',
+          'Biometric authentication failed. Try again or use your PIN.',
         ),
         actions: [
           TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() => _isPinFallback = true);
+            },
+            child: const Text('Use PIN'),
+          ),
+          FilledButton(
             onPressed: () {
               Navigator.pop(context);
               _authenticateUser();
@@ -244,6 +288,10 @@ class _AppControllerState extends State<AppController> {
     await prefs.setString('currencySymbol', _currencySymbol);
     await prefs.setDouble('totalBudget', _totalBudget);
 
+    if (_hashedPin != null) {
+      await prefs.setString('auth_pin_hash', _hashedPin!);
+    }
+
     if (_finalDate != null) {
       await prefs.setString('finalDate', _finalDate!.toIso8601String());
     }
@@ -281,6 +329,10 @@ class _AppControllerState extends State<AppController> {
     await prefs.setBool('biometric_enabled', value);
     setState(() {
       _biometricEnabled = value;
+      if (!value) {
+        _hashedPin = null;
+        prefs.remove('auth_pin_hash');
+      }
     });
   }
 
@@ -318,10 +370,7 @@ class _AppControllerState extends State<AppController> {
 
   void _deleteAccount(String accountId) {
     setState(() {
-      // Remove the account
       _accounts.removeWhere((a) => a.id == accountId);
-
-      // Remove all transactions associated with this account
       _transactions.removeWhere((t) => t.accountId == accountId);
     });
     _saveData();
@@ -370,7 +419,6 @@ class _AppControllerState extends State<AppController> {
     _saveData();
   }
 
-  // NEW METHOD: Update final date
   void _updateFinalDate(DateTime newDate) {
     setState(() {
       _finalDate = newDate;
@@ -391,6 +439,8 @@ class _AppControllerState extends State<AppController> {
       _accounts = [];
       _categories = _getDefaultCategories();
       _biometricEnabled = false;
+      _hashedPin = null;
+      _isPinFallback = false;
     });
   }
 
@@ -450,6 +500,8 @@ class _AppControllerState extends State<AppController> {
     }
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -460,7 +512,15 @@ class _AppControllerState extends State<AppController> {
       return OnboardingFlow(onComplete: _completeOnboarding);
     }
 
-    // Show authentication screen if biometric is enabled and not authenticated
+    // PIN fallback screen (biometric unavailable or failed)
+    if (_biometricEnabled && _isPinFallback) {
+      return _PinScreen(
+        isSettingPin: _hashedPin == null,
+        onPinEntered: _verifyPin,
+      );
+    }
+
+    // Biometric lock screen (supported and not yet authenticated)
     if (_biometricEnabled && !_isAuthenticated) {
       return Scaffold(
         body: Center(
@@ -513,6 +573,11 @@ class _AppControllerState extends State<AppController> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => setState(() => _isPinFallback = true),
+                  child: const Text('Use PIN instead'),
+                ),
               ],
             ),
           ),
@@ -544,6 +609,217 @@ class _AppControllerState extends State<AppController> {
       onBiometricChanged: _saveBiometricPreference,
       debugCurrentDate: _debugCurrentDate,
       onDebugDateChange: _handleDebugDateChange,
+    );
+  }
+}
+
+class _PinScreen extends StatefulWidget {
+  final bool isSettingPin;
+  final Future<void> Function(String pin) onPinEntered;
+
+  const _PinScreen({required this.isSettingPin, required this.onPinEntered});
+
+  @override
+  State<_PinScreen> createState() => _PinScreenState();
+}
+
+class _PinScreenState extends State<_PinScreen> {
+  final _pinController = TextEditingController();
+  final _confirmController = TextEditingController();
+  bool _obscurePin = true;
+  bool _obscureConfirm = true;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _pinController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final pin = _pinController.text.trim();
+
+    if (pin.isEmpty) {
+      _showError('Please enter a PIN');
+      return;
+    }
+
+    if (pin.length < 4) {
+      _showError('PIN must be at least 4 digits');
+      return;
+    }
+
+    if (widget.isSettingPin) {
+      final confirm = _confirmController.text.trim();
+      if (pin != confirm) {
+        _showError('PINs do not match');
+        return;
+      }
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await widget.onPinEntered(pin);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Icon
+                  Container(
+                    alignment: Alignment.center,
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.pin_outlined,
+                        size: 48,
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Title
+                  Text(
+                    widget.isSettingPin ? 'Create a PIN' : 'Enter your PIN',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.isSettingPin
+                        ? 'Set a PIN as a fallback for biometric authentication'
+                        : 'Use your PIN to unlock Wallet',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  TextField(
+                    controller: _pinController,
+                    obscureText: _obscurePin,
+                    keyboardType: TextInputType.number,
+                    maxLength: 8,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      labelText: 'PIN',
+                      hintText: 'Enter PIN',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePin
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: () =>
+                            setState(() => _obscurePin = !_obscurePin),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onSubmitted: (_) => widget.isSettingPin ? null : _submit(),
+                  ),
+
+                  if (widget.isSettingPin) ...[
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _confirmController,
+                      obscureText: _obscureConfirm,
+                      keyboardType: TextInputType.number,
+                      maxLength: 8,
+                      decoration: InputDecoration(
+                        labelText: 'Confirm PIN',
+                        hintText: 'Re-enter PIN',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirm
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          onPressed: () => setState(
+                            () => _obscureConfirm = !_obscureConfirm,
+                          ),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onSubmitted: (_) => _submit(),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'PIN must be 4–8 digits',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 28),
+
+                  FilledButton(
+                    onPressed: _isLoading ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            widget.isSettingPin ? 'Set PIN' : 'Unlock',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
