@@ -2,137 +2,174 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Wallet - Budget Management App</title>
   <style>
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  body {
-    background-color: black;
-    color: white;
-    font-family: 'Courier New', monospace;
-    line-height: 1.4;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-    border: 2px solid white;
-  }
+    body {
+      background-color: black;
+      color: white;
+      font-family: 'Courier New', monospace;
+      line-height: 1.4;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 2px solid white;
+    }
 
-  h1, h2 {
-    color: gray;
-    border-bottom: 1px dashed white;
-    padding-bottom: 5px;
-  }
+    h1, h2, h3 {
+      color: gray;
+      border-bottom: 1px dashed white;
+      padding-bottom: 5px;
+    }
 
-  a {
-    text-decoration: none;
-  }
+    a {
+      text-decoration: none;
+      color: white;
+    }
 
-  a:hover {
-    text-decoration: underline;
-  }
+    a:hover {
+      text-decoration: underline;
+    }
 
-  .header {
-    text-align: center;
-    margin-bottom: 20px;
-    animation: blink 1s infinite;
-  }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      animation: blink 1s infinite;
+    }
 
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
 
-  .content {
-    background-color: black;
-    padding: 20px;
-    border: 1px dashed white;
-    margin-bottom: 20px;
-  }
+    .content {
+      background-color: black;
+      padding: 20px;
+      border: 1px dashed white;
+      margin-bottom: 20px;
+    }
 
-  .content section {
-    margin-bottom: 20px;
-  }
+    .content section {
+      margin-bottom: 20px;
+    }
 
-  .footer {
-    text-align: center;
-    font-size: 0.8em;
-    margin-top: 20px;
-  }
+    .footer {
+      text-align: center;
+      font-size: 0.8em;
+      margin-top: 20px;
+    }
 
-  .marquee {
-    background-color: black;
-    color: white;
-    padding: 5px 0;
-    overflow: hidden;
-    white-space: nowrap;
-    border-top: 1px dashed white;
-    border-bottom: 1px dashed white;
-    margin: 20px 0;
-  }
+    .marquee {
+      background-color: black;
+      color: white;
+      padding: 5px 0;
+      overflow: hidden;
+      white-space: nowrap;
+      border-top: 1px dashed white;
+      border-bottom: 1px dashed white;
+      margin: 20px 0;
+    }
 
-  .marquee p {
-    display: inline-block;
-    padding-left: 100%;
-    animation: marquee 20s linear infinite;
-  }
+    .marquee p {
+      display: inline-block;
+      padding-left: 100%;
+      animation: marquee 20s linear infinite;
+    }
 
-  @keyframes marquee {
-    0% { transform: translate(0, 0); }
-    100% { transform: translate(-100%, 0); }
-  }
+    @keyframes marquee {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(-100%, 0); }
+    }
 
-  /* Extra styles for the project page */
-  .badges {
-    display: flex;
-    gap: 10px;
-    margin: 10px 0;
-    flex-wrap: wrap;
-  }
-  .badge {
-    display: inline-block;
-    padding: 5px 10px;
-    border: 1px dashed white;
-    font-size: 0.8em;
-    text-decoration: none;
-    color: white;
-    font-family: 'Courier New', monospace;
-  }
-  .badge:hover {
-    background-color: #333;
-  }
-  .screenshots {
-    display: flex;
-    justify-content: space-around;
-    gap: 10px;
-    margin: 20px 0;
-    flex-wrap: wrap;
-  }
-  .screenshot {
-    border: 1px dashed white;
-    max-width: 200px;
-  }
-  .code-block {
-    background-color: #111;
-    padding: 10px;
-    border: 1px dashed white;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-    overflow-x: auto;
-  }
-  .back-link {
-    display: inline-block;
-    margin-top: 20px;
-    color: white;
-    text-decoration: none;
-  }
-  .back-link:hover {
-    text-decoration: underline;
-  }
-</style>
+    /* Badges */
+    .badges {
+      display: flex;
+      gap: 10px;
+      margin: 10px 0;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 5px 10px;
+      border: 1px dashed white;
+      font-size: 0.8em;
+      color: white;
+      font-family: 'Courier New', monospace;
+    }
+
+    .badge:hover {
+      background-color: #333;
+    }
+
+    .badge img {
+      height: 20px;
+      vertical-align: middle;
+    }
+
+    /* Screenshots */
+    .screenshots {
+      display: flex;
+      justify-content: space-around;
+      gap: 10px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+
+    .screenshot {
+      border: 1px dashed white;
+      max-width: 200px;
+    }
+
+    /* Code Block */
+    .code-block {
+      background-color: #111;
+      padding: 10px;
+      border: 1px dashed white;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* Back Link */
+    .back-link {
+      display: inline-block;
+      margin-top: 20px;
+      color: white;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1000px) {
+      body {
+        max-width: 98vw;
+        border: none;
+      }
+
+      h1, h2, h3 {
+        border-bottom: 0px dashed white;
+      }
+
+      .content {
+        border: 0px dashed white;
+      }
+
+      .marquee {
+        border-top: 0px dashed white;
+        border-bottom: 0px dashed white;
+      }
+
+      .screenshot {
+        max-width: 48%;
+      }
+    }
+  </style>
 </head>
 <body>
   <div class="header">
@@ -147,7 +184,10 @@
   <div class="content">
     <section>
       <h2>// Overview</h2>
-      <p>Wallet is a simple budget management app built with Flutter. Track your spending and manage your finances. Your data stays on your device.</p>
+      <p>
+        Wallet is a simple budget management app built with Flutter.
+        Track your spending and manage your finances. Your data stays on your device.
+      </p>
       <div class="badges">
         <a href="https://github.com/alfahrelrifananda/wallet/releases" class="badge">
           <img src="https://img.shields.io/github/v/release/alfahrelrifananda/wallet?style=for-the-badge" alt="Latest release">
@@ -159,67 +199,80 @@
           <img src="https://img.shields.io/github/license/alfahrelrifananda/wallet?style=for-the-badge" alt="License">
         </a>
       </div>
-      <p><a href="https://github.com/alfahrelrifananda/wallet/releases" class="badge">Get it on GitHub</a></p>
+      <p>
+        <a href="https://github.com/alfahrelrifananda/wallet/releases" class="badge">Get it on GitHub</a>
+      </p>
     </section>
 
     <section>
       <h2>// Features</h2>
-      <p>• Add and categorize income and expenses<br>
-         • View transaction history<br>
-         • Material Design 3 interface<br>
-         • Your data stays on your device<br>
-         • Available in English and Indonesian</p>
+      <p>
+        • Add and categorize income and expenses<br>
+        • View transaction history<br>
+        • Material Design 3 interface<br>
+        • Your data stays on your device<br>
+        • Available in English and Indonesian
+      </p>
     </section>
 
     <section>
       <h2>// Screenshots</h2>
       <div class="screenshots">
-        <img src="https://raw.githubusercontent.com/alfahrelrifananda/wallet/main/screenshot/screenshot1.png" class="screenshot">
-        <img src="https://raw.githubusercontent.com/alfahrelrifananda/wallet/main/screenshot/screenshot2.png" class="screenshot">
-        <img src="https://raw.githubusercontent.com/alfahrelrifananda/wallet/main/screenshot/screenshot3.png" class="screenshot">
+        <img src="https://raw.githubusercontent.com/alfahrelrifananda/wallet/main/screenshot/screenshot1.png" class="screenshot" alt="Wallet Screenshot 1">
+        <img src="https://raw.githubusercontent.com/alfahrelrifananda/wallet/main/screenshot/screenshot2.png" class="screenshot" alt="Wallet Screenshot 2">
+        <img src="https://raw.githubusercontent.com/alfahrelrifananda/wallet/main/screenshot/screenshot3.png" class="screenshot" alt="Wallet Screenshot 3">
       </div>
     </section>
 
     <section>
       <h2>// Tech Stack</h2>
-      <p>• <strong>Language:</strong> Dart<br>
-         • <strong>Framework:</strong> Flutter<br>
-         • <strong>UI:</strong> Material Design 3<br>
-         • <strong>Platform:</strong> Android (API 24+)<br>
-         • <strong>Target SDK:</strong> API 36</p>
+      <p>
+        • <strong>Language:</strong> Dart<br>
+        • <strong>Framework:</strong> Flutter<br>
+        • <strong>UI:</strong> Material Design 3<br>
+        • <strong>Platform:</strong> Android (API 24+)<br>
+        • <strong>Target SDK:</strong> API 36
+      </p>
     </section>
 
     <section>
       <h2>// Getting Started</h2>
       <h3>Prerequisites</h3>
-      <p>• Flutter SDK (latest stable version)<br>
-         • Android Studio or VS Code with Flutter extensions<br>
-         • Android device or emulator (API 24+)</p>
+      <p>
+        • <a href="https://flutter.dev/docs/get-started/install">Flutter SDK</a> (latest stable version)<br>
+        • Android Studio or VS Code with Flutter extensions<br>
+        • Android device or emulator (API 24+)
+      </p>
 
       <h3>Installation</h3>
       <div class="code-block">
-        git clone https://github.com/alfahrelrifananda/wallet.git<br>
-        cd wallet<br>
-        flutter pub get<br>
-        flutter run
+git clone https://github.com/alfahrelrifananda/wallet.git
+cd wallet
+flutter pub get
+flutter run
       </div>
     </section>
 
     <section>
       <h2>// Contributing</h2>
       <p>If you'd like to contribute:</p>
-      <p>• Fork the project<br>
-         • Open issues for bugs or feature requests<br>
-         • Submit pull requests<br>
-         • Help with translations</p>
+      <p>
+        • Fork the project<br>
+        • Open issues for bugs or feature requests<br>
+        • Submit pull requests<br>
+        • Help with translations
+      </p>
     </section>
 
     <section>
       <h2>// License</h2>
-      <p>This project is licensed under the <strong>GNU General Public License v3.0</strong>. See the <a href="https://github.com/alfahrelrifananda/wallet/blob/main/LICENSE">LICENSE</a> file for details.</p>
+      <p>
+        This project is licensed under the <strong>GNU General Public License v3.0</strong>.
+        See the <a href="https://github.com/alfahrelrifananda/wallet/blob/main/LICENSE">LICENSE</a> file for details.
+      </p>
     </section>
 
-    <a href="index.html" class="back-link">← Back to home</a>
+    <a href="https://alfahrel.my.id/" class="back-link">← Back to home</a>
   </div>
 
   <div class="footer">
