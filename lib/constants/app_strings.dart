@@ -442,6 +442,18 @@ class AppStrings {
       _localizations?.translate('periodEndedOverspent') ??
       'Your budget period has ended. You went over budget, but that\'s okay - use this as learning for next time.';
 
+  static String get savingsAccountInfo =>
+      _localizations?.translate('savingsAccountInfo') ??
+      'Savings accounts start at 0. Fund them via transfers.';
+
+  static String get insufficientBalance =>
+      _localizations?.translate('insufficientBalance') ??
+      'Insufficient Balance';
+
+  static String get overdraftWarning =>
+      _localizations?.translate('overdraftWarning') ??
+      '{} only has {} available, but you\'re trying to use {}.';
+
   static String format(String template, List<String> args) {
     String result = template;
     for (var arg in args) {

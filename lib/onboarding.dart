@@ -213,26 +213,12 @@ class WelcomePage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Icon(
-              Icons.account_balance_wallet_rounded,
-              size: 60,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 40),
           Text(
             AppStrings.welcomeTowallet,
-            style: theme.textTheme.headlineLarge?.copyWith(
+            style: theme.textTheme.displayLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.left,
           ),
           const SizedBox(height: 12),
           Text(
@@ -240,7 +226,7 @@ class WelcomePage extends StatelessWidget {
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.left,
           ),
         ],
       ),
@@ -509,12 +495,6 @@ class _AccountsPageState extends State<AccountsPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.account_balance_wallet_outlined,
-                          size: 64,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(height: 16),
                         Text(
                           AppStrings.noAccountsYet,
                           style: theme.textTheme.titleMedium?.copyWith(
@@ -682,14 +662,19 @@ class _AddEditAccountDialogState extends State<_AddEditAccountDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.account?.name ?? '');
-    _balanceController = TextEditingController(
-      text: widget.account != null
-          ? NumberFormat('#,##0').format(widget.account!.initialBalance)
-          : '',
-    );
     _selectedType = widget.account?.type ?? AccountType.wallet;
     _selectedIcon = widget.account?.icon ?? Icons.account_balance_wallet;
     _selectedColor = widget.account?.color ?? Colors.teal;
+
+    // For a savings account (new or existing), balance is always 0
+    final isSavings = _selectedType == AccountType.savings;
+    _balanceController = TextEditingController(
+      text: isSavings
+          ? ''
+          : (widget.account != null
+                ? NumberFormat('#,##0').format(widget.account!.initialBalance)
+                : ''),
+    );
   }
 
   @override
@@ -703,6 +688,7 @@ class _AddEditAccountDialogState extends State<_AddEditAccountDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEditing = widget.account != null;
+    final isSavings = _selectedType == AccountType.savings;
 
     return Container(
       decoration: BoxDecoration(
@@ -757,55 +743,90 @@ class _AddEditAccountDialogState extends State<_AddEditAccountDialog> {
               ),
               const SizedBox(height: 16),
 
-              // ── Balance field — matches add transaction style ──
-              Material(
-                color: theme.colorScheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(20),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              // ── Initial balance — hidden for savings ──
+              if (!isSavings) ...[
+                Material(
+                  color: theme.colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppStrings.initialBalance,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: theme.colorScheme.onSecondaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _balanceController,
+                          keyboardType: TextInputType.number,
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: '0',
+                            hintStyle: theme.textTheme.displaySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.3),
+                            ),
+                            prefixText: '${widget.selectedSymbol} ',
+                            prefixStyle: theme.textTheme.displaySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            ThousandsSeparatorInputFormatter(),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ] else ...[
+                // Savings notice
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondaryContainer.withOpacity(
+                      0.5,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
                     children: [
-                      Text(
-                        AppStrings.initialBalance,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: theme.colorScheme.onSecondaryContainer,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: theme.colorScheme.primary,
                       ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _balanceController,
-                        keyboardType: TextInputType.number,
-                        style: theme.textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: '0',
-                          hintStyle: theme.textTheme.displaySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurfaceVariant
-                                .withOpacity(0.3),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          AppStrings.savingsAccountInfo,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
                           ),
-                          prefixText: '${widget.selectedSymbol} ',
-                          prefixStyle: theme.textTheme.displaySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
-                          contentPadding: EdgeInsets.zero,
                         ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          ThousandsSeparatorInputFormatter(),
-                        ],
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
+              ],
 
               // ── Account type chips ──
               Text(
@@ -829,6 +850,10 @@ class _AddEditAccountDialogState extends State<_AddEditAccountDialog> {
                         setState(() {
                           _selectedType = type;
                           _selectedIcon = _typeIcons[type]!;
+                          // Clear balance when switching to savings
+                          if (type == AccountType.savings) {
+                            _balanceController.text = '';
+                          }
                         });
                       }
                     },
@@ -860,9 +885,7 @@ class _AddEditAccountDialogState extends State<_AddEditAccountDialog> {
                 children: _colors.map((color) {
                   final isSelected = _selectedColor == color;
                   return InkWell(
-                    onTap: () {
-                      setState(() => _selectedColor = color);
-                    },
+                    onTap: () => setState(() => _selectedColor = color),
                     borderRadius: BorderRadius.circular(24),
                     child: Container(
                       width: 48,
@@ -906,27 +929,31 @@ class _AddEditAccountDialogState extends State<_AddEditAccountDialog> {
                     flex: 2,
                     child: FilledButton(
                       onPressed: () {
-                        final cleanBalance = _balanceController.text.replaceAll(
-                          ',',
-                          '',
-                        );
-                        if (_nameController.text.isNotEmpty &&
-                            cleanBalance.isNotEmpty) {
-                          final account = Account(
+                        if (_nameController.text.isEmpty) return;
+                        // Non-savings accounts require a balance entry
+                        if (!isSavings && _balanceController.text.isEmpty)
+                          return;
+
+                        final initialBalance = isSavings
+                            ? 0.0
+                            : double.parse(
+                                _balanceController.text.replaceAll(',', ''),
+                              );
+
+                        widget.onSave(
+                          Account(
                             id:
                                 widget.account?.id ??
                                 DateTime.now().millisecondsSinceEpoch
                                     .toString(),
                             name: _nameController.text,
                             type: _selectedType,
-                            initialBalance: double.parse(cleanBalance),
+                            initialBalance: initialBalance,
                             icon: _selectedIcon,
                             color: _selectedColor,
-                          );
-
-                          widget.onSave(account);
-                          Navigator.pop(context);
-                        }
+                          ),
+                        );
+                        Navigator.pop(context);
                       },
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -989,7 +1016,6 @@ class DatePage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // ── Date picker button — borderless Material style ──
                   Material(
                     color: selectedDate != null
                         ? theme.colorScheme.secondaryContainer

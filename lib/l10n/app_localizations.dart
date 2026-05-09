@@ -33,6 +33,11 @@ class AppLocalizations {
       'back': 'Back',
       'next': 'Next',
       'getStarted': 'Get Started',
+      'savingsAccountInfo':
+          'Savings accounts start at 0. Fund them via transfers.',
+      'insufficientBalance': 'Insufficient Balance',
+      'overdraftWarning':
+          '{} only has {} available, but you\'re trying to use {}.',
       'accountNameHint': 'e.g., My Wallet',
       'deleteAccountNameConfirm': 'Are you sure you want to delete "{}"?',
       'editAccount': 'Edit Account',
@@ -265,6 +270,11 @@ class AppLocalizations {
       'welcomeDescription':
           'Kelola anggaran Anda dengan bijak menggunakan akun dan kategori',
       'selectCurrency': 'Pilih Mata Uang',
+      'savingsAccountInfo':
+          'Akun tabungan dimulai dari 0. Isi melalui transfer.',
+      'insufficientBalance': 'Saldo Tidak Cukup',
+      'overdraftWarning':
+          '{} hanya memiliki {} tersedia, tetapi Anda mencoba menggunakan {}.',
       'choosePreferredCurrency': 'Pilih mata uang pilihan Anda',
       'addAccounts': 'Tambah Akun',
       'totalBudgetDescription':

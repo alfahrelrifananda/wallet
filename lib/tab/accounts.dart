@@ -247,7 +247,6 @@ class AccountsTab extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Drag handle ──
                   Center(
                     child: Container(
                       width: 32,
@@ -262,7 +261,6 @@ class AccountsTab extends StatelessWidget {
                     ),
                   ),
 
-                  // ── Header ──
                   Row(
                     children: [
                       Container(
@@ -306,7 +304,6 @@ class AccountsTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Balance card ──
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -337,7 +334,6 @@ class AccountsTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Tx count + initial balance ──
                   Row(
                     children: [
                       Expanded(
@@ -361,7 +357,6 @@ class AccountsTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Income / Expenses / Net ──
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -434,7 +429,6 @@ class AccountsTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Delete button or locked notice ──
                   if (canDelete)
                     SizedBox(
                       width: double.infinity,
@@ -731,199 +725,252 @@ class AccountsTab extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 32,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.onSurfaceVariant.withOpacity(
-                          0.4,
+        builder: (context, setDialogState) {
+          final isSavings = selectedType == AccountType.savings;
+
+          // Clear and lock balance field when savings is selected
+          if (isSavings) balanceController.text = '';
+
+          return Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
+            ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 32,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                            0.4,
+                          ),
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                  ),
-                  Text(
-                    AppStrings.addAccount,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  TextField(
-                    controller: nameController,
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      labelText: AppStrings.accountName,
-                      filled: true,
-                      fillColor: theme.colorScheme.secondaryContainer
-                          .withOpacity(0.5),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
+                    Text(
+                      AppStrings.addAccount,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: balanceController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: AppStrings.initialBalance,
-                      prefixText: '$currencySymbol ',
-                      filled: true,
-                      fillColor: theme.colorScheme.secondaryContainer
-                          .withOpacity(0.5),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: nameController,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        labelText: AppStrings.accountName,
+                        filled: true,
+                        fillColor: theme.colorScheme.secondaryContainer
+                            .withOpacity(0.5),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      ThousandsSeparatorInputFormatter(),
+                    const SizedBox(height: 16),
+
+                    // ── Initial balance — hidden for savings ──
+                    if (!isSavings) ...[
+                      TextField(
+                        controller: balanceController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: AppStrings.initialBalance,
+                          prefixText: '$currencySymbol ',
+                          filled: true,
+                          fillColor: theme.colorScheme.secondaryContainer
+                              .withOpacity(0.5),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          ThousandsSeparatorInputFormatter(),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                    ] else ...[
+                      // Savings notice
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.secondaryContainer
+                              .withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                AppStrings.savingsAccountInfo,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                     ],
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    AppStrings.accountType,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+
+                    Text(
+                      AppStrings.accountType,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: AccountType.values.map((type) {
-                      final isSelected = selectedType == type;
-                      return ChoiceChip(
-                        label: Text(
-                          type.toString().split('.').last.toUpperCase(),
-                        ),
-                        avatar: Icon(typeIcons[type], size: 18),
-                        selected: isSelected,
-                        onSelected: (_) {
-                          setDialogState(() {
-                            selectedType = type;
-                            selectedIcon = typeIcons[type]!;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    AppStrings.color,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: AccountType.values.map((type) {
+                        final isSelected = selectedType == type;
+                        return ChoiceChip(
+                          label: Text(
+                            type.toString().split('.').last.toUpperCase(),
+                          ),
+                          avatar: Icon(typeIcons[type], size: 18),
+                          selected: isSelected,
+                          onSelected: (_) {
+                            setDialogState(() {
+                              selectedType = type;
+                              selectedIcon = typeIcons[type]!;
+                            });
+                          },
+                        );
+                      }).toList(),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: colors.map((color) {
-                      final isSelected = selectedColor == color;
-                      return InkWell(
-                        onTap: () =>
-                            setDialogState(() => selectedColor = color),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                            border: isSelected
-                                ? Border.all(
-                                    color: theme.colorScheme.primary,
-                                    width: 3,
+                    const SizedBox(height: 20),
+                    Text(
+                      AppStrings.color,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: colors.map((color) {
+                        final isSelected = selectedColor == color;
+                        return InkWell(
+                          onTap: () =>
+                              setDialogState(() => selectedColor = color),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: isSelected
+                                  ? Border.all(
+                                      color: theme.colorScheme.primary,
+                                      width: 3,
+                                    )
+                                  : null,
+                            ),
+                            child: isSelected
+                                ? const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 24,
                                   )
                                 : null,
                           ),
-                          child: isSelected
-                              ? const Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: 24,
-                                )
-                              : null,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 32),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: Text(AppStrings.cancel),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: FilledButton(
-                          onPressed: () {
-                            final cleanBalance = balanceController.text
-                                .replaceAll(',', '');
-                            if (nameController.text.isEmpty ||
-                                cleanBalance.isEmpty)
-                              return;
-                            onAddAccount(
-                              Account(
-                                id: DateTime.now().millisecondsSinceEpoch
-                                    .toString(),
-                                name: nameController.text,
-                                type: selectedType,
-                                initialBalance: double.parse(cleanBalance),
-                                icon: selectedIcon,
-                                color: selectedColor,
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 32),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                            );
-                            Navigator.pop(context);
-                          },
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
                             ),
+                            child: Text(AppStrings.cancel),
                           ),
-                          child: Text(AppStrings.addAccount),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: FilledButton(
+                            onPressed: () {
+                              if (nameController.text.isEmpty) return;
+                              // Savings always gets 0; others need a value
+                              if (!isSavings && balanceController.text.isEmpty)
+                                return;
+                              final initialBalance = isSavings
+                                  ? 0.0
+                                  : double.parse(
+                                      balanceController.text.replaceAll(
+                                        ',',
+                                        '',
+                                      ),
+                                    );
+                              onAddAccount(
+                                Account(
+                                  id: DateTime.now().millisecondsSinceEpoch
+                                      .toString(),
+                                  name: nameController.text,
+                                  type: selectedType,
+                                  initialBalance: initialBalance,
+                                  icon: selectedIcon,
+                                  color: selectedColor,
+                                ),
+                              );
+                              Navigator.pop(context);
+                            },
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: Text(AppStrings.addAccount),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

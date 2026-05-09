@@ -60,9 +60,66 @@ class OverviewTab extends StatelessWidget {
     return category.name == 'Transfer';
   }
 
+  bool _isSavingsAccount(Transaction transaction) {
+    try {
+      final account = accounts.firstWhere((a) => a.id == transaction.accountId);
+      return account.type == AccountType.savings;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool _isIncomingFromSavings(Transaction t) {
+    if (!_isTransferTransaction(t)) return false;
+    if (!t.isIncome) return false;
+    if (_isSavingsAccount(t)) return false;
+    final baseId = t.id.replaceAll('_in', '');
+    final pairedOut = transactions.where(
+      (other) => other.id == '${baseId}_out' && _isSavingsAccount(other),
+    );
+    return pairedOut.isNotEmpty;
+  }
+
+  /// The single source of truth for whether a transaction affects the budget.
+  ///
+  /// Rules:
+  ///   - Skip everything whose account is a savings account.
+  ///   - For transfer transactions on a normal account:
+  ///       • normal→savings _out (isIncome=false): COUNT as expense ✓
+  ///       • normal→savings _in  (isIncome=true) : COUNT as income  ✓  (handled by _isIncomingFromSavings)
+  ///       • normal→normal either leg            : SKIP              ✗
+  bool _shouldCountForBudget(Transaction t) {
+    // 1. Always ignore anything sitting on a savings account.
+    if (_isSavingsAccount(t)) return false;
+
+    // 2. Only transfer transactions need further inspection.
+    if (!_isTransferTransaction(t)) return true;
+
+    // 3. Incoming leg from savings → count as income.
+    if (_isIncomingFromSavings(t)) return true;
+
+    // 4. Outgoing leg — figure out where it goes.
+    //    Strip suffix to find the paired _in leg.
+    final baseId = t.id.replaceAll('_out', '').replaceAll('_in', '');
+    final pairedIn = transactions.firstWhere(
+      (other) => other.id == '${baseId}_in',
+      orElse: () => t, // fallback: treat as same transaction
+    );
+    final destinationIsSavings = _isSavingsAccount(pairedIn);
+
+    // normal→savings _out: count as expense.
+    if (destinationIsSavings) return true;
+
+    // normal→normal (either leg): skip.
+    return false;
+  }
+
+  // ── Balance helpers ────────────────────────────────────────────────────────
+
   double get _currentBalance {
     double balance = totalBudget;
     for (var t in transactions) {
+      if (!_shouldCountForBudget(t)) continue;
       balance += t.isIncome ? t.amount : -t.amount;
     }
     return balance;
@@ -74,29 +131,42 @@ class OverviewTab extends StatelessWidget {
     double balance = totalBudget;
     for (var t in transactions) {
       final tDate = DateTime(t.date.year, t.date.month, t.date.day);
-      if (tDate.isBefore(today)) {
-        balance += t.isIncome ? t.amount : -t.amount;
-      }
+      if (!tDate.isBefore(today)) continue;
+      if (!_shouldCountForBudget(t)) continue;
+      balance += t.isIncome ? t.amount : -t.amount;
     }
     return balance;
   }
 
   double get _todaySpent {
     final today = DateTime.now();
-    final transferCategoryId = categories
-        .firstWhere((c) => c.name == 'Transfer')
-        .id;
     return transactions
         .where(
           (t) =>
               !t.isIncome &&
-              t.categoryId != transferCategoryId &&
+              _shouldCountForBudget(t) &&
               t.date.year == today.year &&
               t.date.month == today.month &&
               t.date.day == today.day,
         )
         .fold(0.0, (sum, t) => sum + t.amount);
   }
+
+  double get _todayIncome {
+    final today = DateTime.now();
+    return transactions
+        .where(
+          (t) =>
+              t.isIncome &&
+              _shouldCountForBudget(t) &&
+              t.date.year == today.year &&
+              t.date.month == today.month &&
+              t.date.day == today.day,
+        )
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  // ── Date / allowance helpers ───────────────────────────────────────────────
 
   bool get _isPastFinalDate {
     final now = DateTime.now();
@@ -115,32 +185,19 @@ class OverviewTab extends StatelessWidget {
     return _daysLeft > 0 ? _balanceAtStartOfDay / _daysLeft : 0;
   }
 
-  double get _todayIncome {
-    final today = DateTime.now();
-    final transferCategoryId = categories
-        .firstWhere((c) => c.name == 'Transfer')
-        .id;
-    return transactions
-        .where(
-          (t) =>
-              t.isIncome &&
-              t.categoryId != transferCategoryId &&
-              t.date.year == today.year &&
-              t.date.month == today.month &&
-              t.date.day == today.day,
-        )
-        .fold(0.0, (sum, t) => sum + t.amount);
-  }
+  // ── Surplus / rollover ─────────────────────────────────────────────────────
 
   double get _totalSurplusBeforeToday {
     if (transactions.isEmpty) return 0;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+
     final transactionsBeforeToday = transactions.where((t) {
       final tDate = DateTime(t.date.year, t.date.month, t.date.day);
       return tDate.isBefore(today);
     });
     if (transactionsBeforeToday.isEmpty) return 0;
+
     final earliestTransaction = transactionsBeforeToday
         .reduce((a, b) => a.date.isBefore(b.date) ? a : b)
         .date;
@@ -149,40 +206,47 @@ class OverviewTab extends StatelessWidget {
       earliestTransaction.month,
       earliestTransaction.day,
     );
-    final transferCategoryId = categories
-        .firstWhere((c) => c.name == 'Transfer')
-        .id;
+
     double totalSurplus = 0;
     DateTime checkDate = startDate;
+
     while (checkDate.isBefore(today)) {
       final dayTransactions = transactions.where((t) {
         final tDate = DateTime(t.date.year, t.date.month, t.date.day);
         return tDate.isAtSameMomentAs(checkDate);
       });
+
       final daySpent = dayTransactions
-          .where((t) => !t.isIncome && t.categoryId != transferCategoryId)
+          .where((t) => !t.isIncome && _shouldCountForBudget(t))
           .fold(0.0, (sum, t) => sum + t.amount);
+
       final dayIncome = dayTransactions
-          .where((t) => t.isIncome && t.categoryId != transferCategoryId)
+          .where((t) => t.isIncome && _shouldCountForBudget(t))
           .fold(0.0, (sum, t) => sum + t.amount);
+
       final daysLeftAtThatTime = finalDate
           .difference(checkDate)
           .inDays
           .clamp(1, 999999);
+
       final transactionsBeforeThatDay = transactions.where((t) {
         final tDate = DateTime(t.date.year, t.date.month, t.date.day);
         return tDate.isBefore(checkDate);
       });
+
       double balanceAtStartOfThatDay = totalBudget;
       for (var t in transactionsBeforeThatDay) {
+        if (!_shouldCountForBudget(t)) continue;
         balanceAtStartOfThatDay += t.isIncome ? t.amount : -t.amount;
       }
+
       final dayAllowance = daysLeftAtThatTime > 0
           ? balanceAtStartOfThatDay / daysLeftAtThatTime
           : 0;
       final daySavings = dayAllowance + dayIncome - daySpent;
       totalSurplus += daySavings;
       if (totalSurplus < 0) totalSurplus = 0;
+
       checkDate = checkDate.add(const Duration(days: 1));
     }
     return totalSurplus;
@@ -206,6 +270,8 @@ class OverviewTab extends StatelessWidget {
   double get _dailyAllowanceWithRollover =>
       _baseDailyAllowance + _rolloverAmount + _distributedExcess;
 
+  // ── Misc helpers ───────────────────────────────────────────────────────────
+
   double _getAccountBalance(String accountId) {
     final account = accounts.firstWhere((a) => a.id == accountId);
     double balance = account.initialBalance;
@@ -223,6 +289,8 @@ class OverviewTab extends StatelessWidget {
     );
     return formatter.format(amount);
   }
+
+  // ── Dialogs ────────────────────────────────────────────────────────────────
 
   void _showDatePickerDialog(BuildContext context, ThemeData theme) async {
     final DateTime? picked = await showDatePicker(
@@ -634,7 +702,6 @@ class OverviewTab extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Drag handle ──
                   Center(
                     child: Container(
                       width: 32,
@@ -657,7 +724,6 @@ class OverviewTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Type selector ──
                   SegmentedButton<String>(
                     segments: [
                       ButtonSegment(
@@ -690,7 +756,6 @@ class OverviewTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  // ── Amount field — matches add transaction style ──
                   Material(
                     color: theme.colorScheme.secondaryContainer,
                     borderRadius: BorderRadius.circular(20),
@@ -741,7 +806,6 @@ class OverviewTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── From account ──
                   _buildAccountSelector(
                     theme,
                     transactionType,
@@ -750,7 +814,6 @@ class OverviewTab extends StatelessWidget {
                     (account) => selectedAccount = account,
                   ),
 
-                  // ── To account (transfer only) ──
                   if (transactionType == 'transfer') ...[
                     const SizedBox(height: 24),
                     _buildToAccountSelector(
@@ -762,7 +825,6 @@ class OverviewTab extends StatelessWidget {
                     ),
                   ],
 
-                  // ── Category ──
                   if (transactionType != 'transfer') ...[
                     const SizedBox(height: 24),
                     _buildCategorySelector(
@@ -775,7 +837,6 @@ class OverviewTab extends StatelessWidget {
                   ],
                   const SizedBox(height: 24),
 
-                  // ── Date picker ──
                   InkWell(
                     onTap: () async {
                       final picked = await showDatePicker(
@@ -835,7 +896,6 @@ class OverviewTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Note ──
                   TextField(
                     controller: noteController,
                     decoration: InputDecoration(
@@ -855,7 +915,6 @@ class OverviewTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  // ── Actions ──
                   Row(
                     children: [
                       Expanded(
@@ -925,7 +984,7 @@ class OverviewTab extends StatelessWidget {
     );
   }
 
-  // ── Chip selectors (shared helpers) ───────────────────────────────────────
+  // ── Chip selectors ────────────────────────────────────────────────────────
 
   Widget _buildAccountSelector(
     ThemeData theme,
@@ -1102,6 +1161,8 @@ class OverviewTab extends StatelessWidget {
       ],
     );
   }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {

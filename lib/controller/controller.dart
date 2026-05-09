@@ -299,10 +299,14 @@ class _AppControllerState extends State<AppController> {
     if (_isOnboarded && _accounts.isNotEmpty) {
       final currentBalance =
           _totalBudget +
-          _transactions.fold<double>(
-            0.0,
-            (sum, t) => sum + (t.isIncome ? t.amount : -t.amount),
-          );
+          _transactions.fold<double>(0.0, (sum, t) {
+            final account = _accounts.firstWhere(
+              (a) => a.id == t.accountId,
+              orElse: () => _accounts.first,
+            );
+            if (account.type == AccountType.savings && !t.isIncome) return sum;
+            return sum + (t.isIncome ? t.amount : -t.amount);
+          });
 
       await HomeWidgetHelper.updateBalance(
         balance: currentBalance,

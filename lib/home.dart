@@ -232,6 +232,42 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  double getAccountBalance(Account acc) {
+    double bal = acc.initialBalance;
+    for (final t in widget.transactions.where((t) => t.accountId == acc.id)) {
+      bal += t.isIncome ? t.amount : -t.amount;
+    }
+    return bal;
+  }
+
+  Future<bool> confirmOverdraft(
+    String accountName,
+    double available,
+    double requested,
+  ) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            icon: Icon(
+              Icons.warning_rounded,
+              color: Theme.of(ctx).colorScheme.error,
+              size: 40,
+            ),
+            title: Text(AppStrings.insufficientBalance),
+            content: Text(
+              '${AppStrings.format(AppStrings.overdraftWarning, [accountName, '${widget.currencySymbol}${available.toStringAsFixed(0)}', '${widget.currencySymbol}${requested.toStringAsFixed(0)}'])}\n\n',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
   @override
   Widget build(BuildContext context) {
     AppStrings.init(context);
@@ -665,6 +701,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               .map((category) {
                                 final isSelected =
                                     selectedCategory.id == category.id;
+
                                 return FilterChip(
                                   selected: isSelected,
                                   label: Row(
@@ -726,15 +763,29 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         flex: 2,
                         child: FilledButton(
-                          onPressed: () {
+                          onPressed: () async {
                             final clean = amountController.text.replaceAll(
                               ',',
                               '',
                             );
                             if (clean.isEmpty) return;
 
+                            final amount = double.parse(clean);
+
                             if (transactionType == 'transfer') {
                               if (selectedToAccount == null) return;
+
+                              final sourceBalance = getAccountBalance(
+                                selectedAccount,
+                              );
+                              if (amount > sourceBalance) {
+                                final proceed = await confirmOverdraft(
+                                  selectedAccount.name,
+                                  sourceBalance,
+                                  amount,
+                                );
+                                if (!proceed) return;
+                              }
 
                               final now = DateTime.now();
                               final transferId = now.millisecondsSinceEpoch
@@ -743,7 +794,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               widget.onAddTransaction(
                                 Transaction(
                                   id: '${transferId}_out',
-                                  amount: double.parse(clean),
+                                  amount: amount,
                                   isIncome: false,
                                   date: now,
                                   accountId: selectedAccount.id,
@@ -760,7 +811,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               widget.onAddTransaction(
                                 Transaction(
                                   id: '${transferId}_in',
-                                  amount: double.parse(clean),
+                                  amount: amount,
                                   isIncome: true,
                                   date: now,
                                   accountId: selectedToAccount!.id,
@@ -774,11 +825,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               );
                             } else {
+                              if (transactionType == 'expense') {
+                                final sourceBalance = getAccountBalance(
+                                  selectedAccount,
+                                );
+                                if (amount > sourceBalance) {
+                                  final proceed = await confirmOverdraft(
+                                    selectedAccount.name,
+                                    sourceBalance,
+                                    amount,
+                                  );
+                                  if (!proceed) return;
+                                }
+                              }
+
                               widget.onAddTransaction(
                                 Transaction(
                                   id: DateTime.now().millisecondsSinceEpoch
                                       .toString(),
-                                  amount: double.parse(clean),
+                                  amount: amount,
                                   isIncome: transactionType == 'income',
                                   date: DateTime.now(),
                                   accountId: selectedAccount.id,
